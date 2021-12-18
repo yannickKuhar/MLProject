@@ -3,13 +3,16 @@ import time
 import numpy as np
 
 from DataLoad import DataLoad
+from Vectorizer import Vectorizer
 
 from sklearn import svm
-from sklearn.metrics import accuracy_score
 from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.feature_extraction.text import TfidfVectorizer
+
+from gensim.test.utils import common_texts
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 TAG = '[MAIN]'
 ERROR = '[ERROR]'
@@ -23,7 +26,7 @@ EMAILS = 'emails'
 IMDB = 'imdb'
 
 
-def split_data(x: np.array, y: list):
+def split_data(x, y):
     ss = list(StratifiedShuffleSplit(n_splits=1, test_size=0.3, random_state=0).split(x, y))
 
     test_index = ss[0][0]
@@ -35,36 +38,34 @@ def split_data(x: np.array, y: list):
     return x_train, x_test, y_train, y_test
 
 
-def tfidf(corpus: [str]) -> np.array:
-    print(f'{TAG} TDIDF start.')
-    vectorizer = TfidfVectorizer()
-    X = vectorizer.fit_transform(corpus)
-
-    print(f'{TAG} TDIDF done.')
-
-    return X.toarray()
-
-
 def main(argv):
     start = time.time()
 
+    X =[]
+    y = []
     dl = DataLoad()
 
     if argv[2] == BBC:
         X, y = dl.load_bbc()
+        X = [x.split(' ') for x in X]
     elif argv[2] == EMAILS:
         X, y = dl.load_emails()
+        X = [x.split(' ') for x in X]
     elif argv[2] == IMDB:
         x_train, x_test, y_train, y_test = dl.load_imdb()
-        x_train = tfidf(x_train)
-        x_test = tfidf(x_test)
     else:
         print(f'{TAG} {ERROR} Invalid data.')
         return -1
 
     if argv[2] != IMDB:
-        X = tfidf(X)
         x_train, x_test, y_train, y_test = split_data(X, y)
+
+    vec = Vectorizer()
+    X = vec.d2vec(x_train, x_test)
+
+    # print(X)
+
+    return -1
 
     if argv[1] == SVM:
         clf = svm.SVC()
@@ -78,8 +79,8 @@ def main(argv):
 
     print(f'{TAG} Model: {argv[1]} training start.')
     clf.fit(x_train, y_train)
+
     predictions = clf.predict(x_test)
-    print(f'{TAG} Model: {argv[1]} training done.')
 
     print(f'{TAG} CA: {round(accuracy_score(predictions, y_test), 4)}')
     print(f'{TAG} Time: {round(time.time() - start, 2)} seconds')
@@ -87,3 +88,14 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
+    # documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(common_texts)]
+    #
+    # print(common_texts)
+    # print(len(common_texts))
+    # # print(type(common_texts), type(common_texts[0]), type(common_texts[0][0]))
+    #
+    # model = Doc2Vec(documents, vector_size=5, window=2, min_count=1, workers=4)
+    # vecs = model.infer_vector(common_texts[0])
+    #
+    # print(vecs)
+
