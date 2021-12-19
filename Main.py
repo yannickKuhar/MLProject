@@ -1,6 +1,5 @@
 import sys
 import time
-import logging
 import numpy as np
 
 from DataLoad import DataLoad
@@ -47,35 +46,39 @@ def main(argv):
     dl = DataLoad()
     vec = Vectorizer()
 
-    x_train, x_test, y_train, y_true = None, None, None, None
+    x_train, x_test, y_train, y_true, y_test = None, None, None, None, None
 
     if argv[2] == BBC:
         X, y = dl.load_bbc()
-        X = [x.split(' ') for x in X]
     elif argv[2] == EMAILS:
         X, y = dl.load_emails()
-        X = [x.split(' ') for x in X]
     elif argv[2] == IMDB:
         x_train, x_test, y_train, y_true = dl.load_imdb()
 
         if argv[3] == TDIDF:
             x_train = vec.tfidf(x_train)
             x_test = vec.tfidf(x_test)
+
+        if argv[3] == D2V:
+            x_train = [x.split(' ') for x in x_train]
+            x_test = [x.split(' ') for x in x_test]
+
+            X = vec.d2vec(x_train, x_test)
+            x_train, x_test, y_train, y_test = split_data(X, y_true)
     else:
         print(f'{TAG} {ERROR} Invalid data.')
         return -1
 
-    if argv[3] == TDIDF:
+    if argv[3] == TDIDF and argv[2] != IMDB:
         X = vec.tfidf(X)
+        x_train, x_test, y_train, y_test = split_data(X, y)
 
-    if argv[2] != IMDB:
+    if argv[3] == D2V and argv[2] != IMDB:
+        X = [x.split(' ') for x in X]
         x_train, x_test, y_train, y_true = split_data(X, y)
 
-    if argv[3] == D2V:
         X = vec.d2vec(x_train, x_test)
         x_train, x_test, y_train, y_test = split_data(X, y_true)
-    elif argv[3] == TDIDF:
-        X = vec.tfidf()
 
     if argv[1] == SVM:
         clf = svm.SVC()
@@ -92,7 +95,11 @@ def main(argv):
 
     predictions = clf.predict(x_test)
 
-    print(f'{TAG} CA: {round(accuracy_score(predictions, y_test), 2)}')
+    if argv[2] == IMDB and argv[3] == TDIDF:
+        print(f'{TAG} CA: {round(accuracy_score(predictions, y_true), 2)}')
+    else:
+        print(f'{TAG} CA: {round(accuracy_score(predictions, y_test), 2)}')
+
     print(f'{TAG} Time: {round(time.time() - start, 2)} seconds')
 
 
