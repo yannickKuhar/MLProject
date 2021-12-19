@@ -1,5 +1,6 @@
 import sys
 import time
+import logging
 import numpy as np
 
 from DataLoad import DataLoad
@@ -11,9 +12,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from gensim.test.utils import common_texts
-from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-
 TAG = '[MAIN]'
 ERROR = '[ERROR]'
 
@@ -24,6 +22,9 @@ NB = 'nb'
 BBC = 'bbc'
 EMAILS = 'emails'
 IMDB = 'imdb'
+
+TDIDF = 'tdidf'
+D2V = 'd2v'
 
 
 def split_data(x, y):
@@ -44,6 +45,9 @@ def main(argv):
     X =[]
     y = []
     dl = DataLoad()
+    vec = Vectorizer()
+
+    x_train, x_test, y_train, y_true = None, None, None, None
 
     if argv[2] == BBC:
         X, y = dl.load_bbc()
@@ -52,20 +56,26 @@ def main(argv):
         X, y = dl.load_emails()
         X = [x.split(' ') for x in X]
     elif argv[2] == IMDB:
-        x_train, x_test, y_train, y_test = dl.load_imdb()
+        x_train, x_test, y_train, y_true = dl.load_imdb()
+
+        if argv[3] == TDIDF:
+            x_train = vec.tfidf(x_train)
+            x_test = vec.tfidf(x_test)
     else:
         print(f'{TAG} {ERROR} Invalid data.')
         return -1
 
+    if argv[3] == TDIDF:
+        X = vec.tfidf(X)
+
     if argv[2] != IMDB:
-        x_train, x_test, y_train, y_test = split_data(X, y)
+        x_train, x_test, y_train, y_true = split_data(X, y)
 
-    vec = Vectorizer()
-    X = vec.d2vec(x_train, x_test)
-
-    # print(X)
-
-    return -1
+    if argv[3] == D2V:
+        X = vec.d2vec(x_train, x_test)
+        x_train, x_test, y_train, y_test = split_data(X, y_true)
+    elif argv[3] == TDIDF:
+        X = vec.tfidf()
 
     if argv[1] == SVM:
         clf = svm.SVC()
@@ -82,20 +92,9 @@ def main(argv):
 
     predictions = clf.predict(x_test)
 
-    print(f'{TAG} CA: {round(accuracy_score(predictions, y_test), 4)}')
+    print(f'{TAG} CA: {round(accuracy_score(predictions, y_test), 2)}')
     print(f'{TAG} Time: {round(time.time() - start, 2)} seconds')
 
 
 if __name__ == '__main__':
     main(sys.argv)
-    # documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(common_texts)]
-    #
-    # print(common_texts)
-    # print(len(common_texts))
-    # # print(type(common_texts), type(common_texts[0]), type(common_texts[0][0]))
-    #
-    # model = Doc2Vec(documents, vector_size=5, window=2, min_count=1, workers=4)
-    # vecs = model.infer_vector(common_texts[0])
-    #
-    # print(vecs)
-

@@ -1,13 +1,10 @@
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
 class Vectorizer:
-
     @staticmethod
     def tfidf(corpus):
         vectorizer = TfidfVectorizer()
