@@ -6,10 +6,10 @@ import numpy as np
 
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+# nltk.download()
+
 
 from keras.datasets import imdb
-
-# nltk.download()
 
 
 class DataLoad:
@@ -123,4 +123,3 @@ class DataLoad:
         print(f'{self.tag} IMDB load done.')
 
         return x_train_decoded, x_test_decoded, y_train, y_test
-
